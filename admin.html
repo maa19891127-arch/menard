@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理者ページ | MENARD おとりあ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #fdf6f9; color: #333; font-size: 14px; }
+
+/* ログイン画面 */
+.login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #c0607a, #e8a0b0); }
+.login-box { background: white; border-radius: 16px; padding: 40px 32px; width: 320px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); text-align: center; }
+.login-box h1 { color: #c0607a; font-size: 20px; margin-bottom: 6px; }
+.login-box p { color: #999; font-size: 12px; margin-bottom: 24px; }
+.login-box input { width: 100%; padding: 12px; border: 2px solid #e8c0cc; border-radius: 8px; font-size: 15px; margin-bottom: 16px; outline: none; text-align: center; letter-spacing: 2px; }
+.login-box input:focus { border-color: #c0607a; }
+.login-box button { width: 100%; padding: 12px; background: linear-gradient(135deg, #c0607a, #e8a0b0); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+.login-box button:hover { opacity: 0.9; }
+.login-error { color: #e00; font-size: 13px; margin-top: 10px; display: none; }
+
+/* メイン */
+.main { display: none; }
+.header { background: linear-gradient(135deg, #c0607a, #e8a0b0); color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 17px; }
+.header-right { display: flex; gap: 10px; align-items: center; }
+.logout-btn { background: rgba(255,255,255,0.25); border: none; color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; }
+
+/* ダッシュボード */
+.dashboard { padding: 16px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: white; border-radius: 10px; padding: 14px; border-left: 4px solid #c0607a; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.stat-card .num { font-size: 26px; font-weight: bold; color: #c0607a; }
+.stat-card .label { font-size: 12px; color: #888; margin-top: 4px; }
+
+/* コントロールバー */
+.controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.controls input, .controls select { padding: 8px 12px; border: 1.5px solid #e0c0cc; border-radius: 8px; font-size: 13px; outline: none; }
+.controls input { flex: 1; min-width: 160px; }
+.controls input:focus, .controls select:focus { border-color: #c0607a; }
+.btn { padding: 9px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; }
+.btn-pink { background: linear-gradient(135deg, #c0607a, #e8a0b0); color: white; }
+.btn-pink:hover { opacity: 0.9; }
+.btn-green { background: #4a9060; color: white; }
+.btn-green:hover { opacity: 0.9; }
+.btn-gray { background: #eee; color: #666; }
+
+/* 注文テーブル */
+.order-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.order-table th { background: #c0607a; color: white; padding: 12px 10px; text-align: left; font-size: 13px; white-space: nowrap; }
+.order-table td { padding: 10px; border-bottom: 1px solid #f0e0e8; font-size: 13px; vertical-align: top; }
+.order-table tr:last-child td { border-bottom: none; }
+.order-table tr:hover td { background: #fff5f8; }
+
+/* ステータスバッジ */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; white-space: nowrap; }
+.badge-new    { background: #ffe0e6; color: #c0607a; }
+.badge-proc   { background: #fff0d0; color: #c06820; }
+.badge-ship   { background: #d0e8ff; color: #2060c0; }
+.badge-done   { background: #d0f0e0; color: #207040; }
+
+/* アクションボタン */
+.act-btn { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; margin: 2px; }
+.act-edit { background: #e8f0ff; color: #2060c0; }
+.act-del  { background: #ffe8e8; color: #c02020; }
+.act-stat { background: #f0f0f0; color: #444; }
+
+/* モーダル */
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+.modal.show { display: flex; }
+.modal-box { background: white; border-radius: 14px; padding: 24px; width: 95%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+.modal-box h2 { color: #c0607a; font-size: 16px; margin-bottom: 18px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; font-weight: bold; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e0c0cc; border-radius: 8px; font-size: 14px; outline: none; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #c0607a; }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+/* 注文商品リスト（モーダル内） */
+.items-area { border: 1.5px solid #e0c0cc; border-radius: 8px; padding: 10px; margin-top: 4px; max-height: 200px; overflow-y: auto; }
+.item-row { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+.item-row input { flex: 1; }
+.item-row input.qty { width: 60px; flex: none; }
+.item-row .rm { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; }
+.item-row .rm:hover { color: #e00; }
+.add-item-btn { color: #c0607a; background: none; border: 1px dashed #c0607a; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 12px; margin-top: 6px; }
+
+/* 空状態 */
+.empty-state { text-align: center; padding: 40px; color: #ccc; }
+
+@media (max-width: 600px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .order-table { font-size: 12px; }
+  .order-table th, .order-table td { padding: 7px 6px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <h1>🌸 管理者ログイン</h1>
+    <p>MENARD おとりあ</p>
+    <input type="password" id="pwInput" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">ログイン</button>
+    <div class="login-error" id="loginError">パスワードが違います</div>
+  </div>
+</div>
+
+<!-- メイン管理画面 -->
+<div class="main" id="mainWrap">
+  <div class="header">
+    <h1>🌸 MENARD おとりあ 管理者ページ</h1>
+    <div class="header-right">
+      <span id="todayDate" style="font-size:13px;opacity:0.9"></span>
+      <button class="logout-btn" onclick="logout()">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <!-- 統計 -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="num" id="stat-all">0</div>
+        <div class="label">📦 総注文数</div>
+      </div>
+      <div class="stat-card" style="border-color:#e08020">
+        <div class="num" id="stat-new" style="color:#e08020">0</div>
+        <div class="label">🆕 未対応</div>
+      </div>
+      <div class="stat-card" style="border-color:#2060c0">
+        <div class="num" id="stat-ship" style="color:#2060c0">0</div>
+        <div class="label">🚚 発送済み</div>
+      </div>
+      <div class="stat-card" style="border-color:#207040">
+        <div class="num" id="stat-sales" style="color:#207040">0</div>
+        <div class="label">💴 今月売上(税込)</div>
+      </div>
+    </div>
+
+    <!-- コントロール -->
+    <div class="controls">
+      <input type="text" id="searchBox" placeholder="🔍 お客様名・商品で検索..." oninput="renderOrders()">
+      <select id="statusFilter" onchange="renderOrders()">
+        <option value="">すべて</option>
+        <option value="未対応">🆕 未対応</option>
+        <option value="処理中">⚙️ 処理中</option>
+        <option value="発送済み">🚚 発送済み</option>
+        <option value="完了">✅ 完了</option>
+      </select>
+      <button class="btn btn-pink" onclick="openAddModal()">＋ 注文を追加</button>
+      <button class="btn btn-green" onclick="exportCSV()">📥 CSV出力</button>
+    </div>
+
+    <!-- 注文テーブル -->
+    <div style="overflow-x:auto">
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th>日付</th>
+            <th>お客様名</th>
+            <th>注文内容</th>
+            <th>合計(税込)</th>
+            <th>ステータス</th>
+            <th>メモ</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="orderTableBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none">まだ注文がありません</div>
+  </div>
+</div>
+
+<!-- 注文追加/編集モーダル -->
+<div class="modal" id="orderModal">
+  <div class="modal-box">
+    <h2 id="modalTitle">＋ 注文を追加</h2>
+    <div class="form-group">
+      <label>お客様名 *</label>
+      <input type="text" id="f-customer" placeholder="山田 花子">
+    </div>
+    <div class="form-group">
+      <label>注文日 *</label>
+      <input type="date" id="f-date">
+    </div>
+    <div class="form-group">
+      <label>注文商品</label>
+      <div class="items-area" id="itemsArea"></div>
+      <button class="add-item-btn" onclick="addItemRow()">＋ 商品を追加</button>
+    </div>
+    <div class="form-group">
+      <label>合計金額（税込）</label>
+      <input type="number" id="f-total" placeholder="例：5500">
+    </div>
+    <div class="form-group">
+      <label>ステータス</label>
+      <select id="f-status">
+        <option value="未対応">🆕 未対応</option>
+        <option value="処理中">⚙️ 処理中</option>
+        <option value="発送済み">🚚 発送済み</option>
+        <option value="完了">✅ 完了</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>配送方法</label>
+      <select id="f-delivery">
+        <option value="手渡し">🤝 手渡し</option>
+        <option value="配送">📦 配送</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea id="f-note" placeholder="住所・特記事項など"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-pink" onclick="saveOrder()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PASS = '7415369mA';
+let orders = [];
+let editingId = null;
+
+// ---- ログイン ----
+function login() {
+  const v = document.getElementById('pwInput').value;
+  if (v === PASS) {
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('mainWrap').style.display = 'block';
+    sessionStorage.setItem('adminAuth', '1');
+    init();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+  }
+}
+function logout() {
+  sessionStorage.removeItem('adminAuth');
+  location.reload();
+}
+// セッション維持
+if (sessionStorage.getItem('adminAuth') === '1') {
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('mainWrap').style.display = 'block';
+  init();
+}
+
+function init() {
+  orders = JSON.parse(localStorage.getItem('adminOrders') || '[]');
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ja-JP');
+  renderOrders();
+  updateStats();
+}
+
+// ---- 統計 ----
+function updateStats() {
+  document.getElementById('stat-all').textContent = orders.length;
+  document.getElementById('stat-new').textContent = orders.filter(o=>o.status==='未対応').length;
+  document.getElementById('stat-ship').textContent = orders.filter(o=>o.status==='発送済み').length;
+  const now = new Date();
+  const thisMonth = orders.filter(o => {
+    const d = new Date(o.date);
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  });
+  const sales = thisMonth.reduce((s,o)=>s+(parseInt(o.total)||0), 0);
+  document.getElementById('stat-sales').textContent = sales.toLocaleString()+'円';
+}
+
+// ---- 注文一覧 ----
+const STATUS_BADGE = {
+  '未対応': 'badge-new',
+  '処理中': 'badge-proc',
+  '発送済み': 'badge-ship',
+  '完了': 'badge-done',
+};
+function renderOrders() {
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const sf = document.getElementById('statusFilter').value;
+  let filtered = orders.filter(o => {
+    const matchSearch = !search ||
+      o.customer.toLowerCase().includes(search) ||
+      (o.items||[]).some(it=>it.name.toLowerCase().includes(search));
+    const matchStatus = !sf || o.status === sf;
+    return matchSearch && matchStatus;
+  });
+  // 新しい順
+  filtered = [...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  const tbody = document.getElementById('orderTableBody');
+  const empty = document.getElementById('emptyState');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = filtered.map(o => {
+    const itemsText = (o.items||[]).map(it=>`${it.name}×${it.qty}`).join('、') || o.itemsText || '―';
+    const badge = STATUS_BADGE[o.status] || 'badge-new';
+    return `<tr>
+      <td style="white-space:nowrap">${o.date}</td>
+      <td style="font-weight:bold">${o.customer}</td>
+      <td style="max-width:220px;word-break:break-all;font-size:12px">${itemsText}</td>
+      <td style="white-space:nowrap;font-weight:bold;color:#c0607a">${parseInt(o.total||0).toLocaleString()}円</td>
+      <td><span class="badge ${badge}">${o.status||'未対応'}</span></td>
+      <td style="font-size:12px;color:#888">${o.note||''}<br><span style="color:#2060c0">${o.delivery||''}</span></td>
+      <td style="white-space:nowrap">
+        <button class="act-btn act-edit" onclick="openEditModal('${o.id}')">✏️編集</button>
+        <button class="act-btn act-stat" onclick="nextStatus('${o.id}')">▶ 次へ</button>
+        <button class="act-btn act-del" onclick="deleteOrder('${o.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- ステータス順送り ----
+const STATUS_SEQ = ['未対応','処理中','発送済み','完了'];
+function nextStatus(id) {
+  const o = orders.find(x=>x.id===id);
+  if (!o) return;
+  const idx = STATUS_SEQ.indexOf(o.status);
+  o.status = STATUS_SEQ[(idx+1) % STATUS_SEQ.length];
+  saveAll();
+}
+
+// ---- 削除 ----
+function deleteOrder(id) {
+  if (!confirm('この注文を削除しますか？')) return;
+  orders = orders.filter(o=>o.id!==id);
+  saveAll();
+}
+
+// ---- モーダル ----
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '＋ 注文を追加';
+  document.getElementById('f-customer').value = '';
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-total').value = '';
+  document.getElementById('f-status').value = '未対応';
+  document.getElementById('f-delivery').value = '手渡し';
+  document.getElementById('f-note').value = '';
+  document.getElementById('itemsArea').innerHTML = '';
+  addItemRow();
+  document.getElementById('orderModal').classList.add('show');
+}
+function openEditModal(id) {
+  const o = orders.find(x=>x.id===id);
+  if (!o) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = '✏️ 注文を編集';
+  document.getElementById('f-customer').value = o.customer;
+  document.getElementById('f-date').value = o.date;
+  document.getElementById('f-total').value = o.total || '';
+  document.getElementById('f-status').value = o.status || '未対応';
+  document.getElementById('f-delivery').value = o.delivery || '手渡し';
+  document.getElementById('f-note').value = o.note || '';
+  const area = document.getElementById('itemsArea');
+  area.innerHTML = '';
+  (o.items||[{name:'',qty:1}]).forEach(it=>addItemRow(it.name,it.qty));
+  document.getElementById('orderModal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('orderModal').classList.remove('show');
+}
+
+function addItemRow(name='', qty=1) {
+  const area = document.getElementById('itemsArea');
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.innerHTML = `<input type="text" placeholder="商品名" value="${name}">
+    <input type="number" class="qty" placeholder="個数" value="${qty}" min="1">
+    <button class="rm" onclick="this.parentElement.remove()">×</button>`;
+  area.appendChild(div);
+}
+
+function saveOrder() {
+  const customer = document.getElementById('f-customer').value.trim();
+  if (!customer) { alert('お客様名を入力してください'); return; }
+  const rows = document.querySelectorAll('#itemsArea .item-row');
+  const items = [...rows].map(r => ({
+    name: r.querySelector('input[type=text]').value.trim(),
+    qty: parseInt(r.querySelector('input[type=number]').value)||1,
+  })).filter(it=>it.name);
+  const order = {
+    id: editingId || Date.now().toString(),
+    customer,
+    date: document.getElementById('f-date').value,
+    items,
+    total: document.getElementById('f-total').value,
+    status: document.getElementById('f-status').value,
+    delivery: document.getElementById('f-delivery').value,
+    note: document.getElementById('f-note').value,
+  };
+  if (editingId) {
+    const idx = orders.findIndex(o=>o.id===editingId);
+    orders[idx] = order;
+  } else {
+    orders.unshift(order);
+  }
+  saveAll();
+  closeModal();
+}
+
+function saveAll() {
+  localStorage.setItem('adminOrders', JSON.stringify(orders));
+  renderOrders();
+  updateStats();
+}
+
+// ---- CSV出力 ----
+function exportCSV() {
+  const bom = '\uFEFF';
+  const header = 'ID,日付,お客様名,注文商品,合計(税込),ステータス,配送方法,メモ';
+  const rows = orders.map(o => {
+    const items = (o.items||[]).map(it=>`${it.name}×${it.qty}`).join('・');
+    return [o.id,o.date,o.customer,items,o.total||'',o.status||'',o.delivery||'',o.note||'']
+      .map(v=>`"${(v+'').replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = bom + header + '\n' + rows.join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `メナード注文_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('orderModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
