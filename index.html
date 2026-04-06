@@ -86,6 +86,18 @@
   /* 履歴ボタン */
   .history-btn { position: fixed; bottom: 20px; left: 20px; background: #7878c0; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
 
+  /* LINEモーダル */
+  .line-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; align-items: flex-end; justify-content: center; }
+  .line-modal.show { display: flex; }
+  .line-modal-box { background: white; border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-width: 600px; animation: slideUp 0.3s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .line-modal-title { font-size: 16px; font-weight: bold; color: #c0607a; text-align: center; margin-bottom: 12px; }
+  .line-modal-text { background: #f5f5f5; border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; margin-bottom: 14px; max-height: 40vh; overflow-y: auto; }
+  .line-modal-hint { font-size: 12px; color: #888; text-align: center; margin-bottom: 14px; }
+  .line-modal-btns { display: flex; flex-direction: column; gap: 8px; }
+  .btn-copy-send { background: linear-gradient(135deg, #06c755, #00a040); color: white; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: bold; cursor: pointer; }
+  .btn-close-modal { background: #f0f0f0; color: #666; border: none; border-radius: 10px; padding: 12px; font-size: 14px; cursor: pointer; }
+
   /* モーダル */
   .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
   .modal.show { display: flex; }
@@ -174,6 +186,19 @@
 </div>
 
 <button class="history-btn" onclick="showHistory()" title="注文履歴">📋</button>
+
+<!-- LINE送信モーダル -->
+<div class="line-modal" id="lineModal">
+  <div class="line-modal-box">
+    <div class="line-modal-title">🌸 注文内容の確認</div>
+    <div class="line-modal-text" id="lineModalText"></div>
+    <div class="line-modal-hint">📋 コピーしてLINEチャットに貼り付けて送信してください</div>
+    <div class="line-modal-btns">
+      <button class="btn-copy-send" onclick="copyAndOpenLine()">📋 コピーしてLINEを開く</button>
+      <button class="btn-close-modal" onclick="closeLineModal()">閉じる</button>
+    </div>
+  </div>
+</div>
 
 <!-- 履歴モーダル -->
 <div class="modal" id="historyModal">
@@ -390,23 +415,19 @@ function buildOrderText() {
   return { text, totalTax };
 }
 
+let _currentOrderText = '';
+
 function sendToLINE() {
   if (orderItems.length === 0) { alert('注文商品がありません'); return; }
   const { text } = buildOrderText();
+  _currentOrderText = text;
 
-  // LINEアプリ内（LIFF）から開いている場合 → liff.sendMessages()で直接送信
   if (liffReady && liff.isInClient()) {
-    liff.sendMessages([{ type: 'text', text }])
-      .then(() => {
-        alert('✅ 注文をLINEで送信しました！');
-        // 送信後にLIFFを閉じる
-        liff.closeWindow();
-      })
-      .catch(err => {
-        alert('送信に失敗しました。もう一度お試しください。\n' + err.message);
-      });
+    // LIFF内（リッチメニューから）→ モーダルで表示してコピー誘導
+    document.getElementById('lineModalText').textContent = text;
+    document.getElementById('lineModal').classList.add('show');
   } else {
-    // ブラウザから開いている場合 → クリップボード＋LINEアプリ起動
+    // ブラウザから → クリップボード＋LINEアプリ起動
     navigator.clipboard.writeText(text).then(() => {
       const encoded = encodeURIComponent(text);
       window.open(`https://line.me/R/oaMessage/@761sosfz/?text=${encoded}`, '_blank');
@@ -414,6 +435,34 @@ function sendToLINE() {
       alert('注文内容をコピーしてLINEで送ってください：\n\n' + text);
     });
   }
+}
+
+function copyAndOpenLine() {
+  navigator.clipboard.writeText(_currentOrderText).then(() => {
+    const encoded = encodeURIComponent(_currentOrderText);
+    // LIFF内ではopenWindowでLINEチャットを開く
+    if (liffReady && liff.isInClient()) {
+      liff.openWindow({
+        url: `https://line.me/R/oaMessage/@761sosfz/?text=${encoded}`,
+        external: false
+      });
+    } else {
+      window.open(`https://line.me/R/oaMessage/@761sosfz/?text=${encoded}`, '_blank');
+    }
+    closeLineModal();
+  }).catch(() => {
+    // クリップボード失敗時はテキスト選択状態にする
+    const el = document.getElementById('lineModalText');
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    alert('テキストを長押しでコピーして、LINEチャットに貼り付けてください');
+  });
+}
+
+function closeLineModal() {
+  document.getElementById('lineModal').classList.remove('show');
 }
 
 function showHistory() {
