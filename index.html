@@ -399,7 +399,7 @@ function buildOrderText() {
   const lines = orderItems.map(o => {
     const tax = parsePrice(o.product.priceTax) || parsePrice(o.product.priceEx);
     totalTax += tax * o.qty;
-    return `・${o.product.name}　×${o.qty}　${formatNum(tax * o.qty)}円`;
+    return `・${o.product.name}　×${o.qty}　${tax * o.qty >= 0 ? (tax * o.qty).toLocaleString() + '円' : ''}`;
   });
   const text = [
     '🌸 メナード注文',
@@ -410,7 +410,7 @@ function buildOrderText() {
     '━━━━━━━━━━',
     ...lines,
     '━━━━━━━━━━',
-    `💴 合計（税込）：${formatNum(totalTax)}円`,
+    `💴 合計（税込）：${totalTax.toLocaleString()}円`,
   ].filter(Boolean).join('\n');
   return { text, totalTax };
 }
