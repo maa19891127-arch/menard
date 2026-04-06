@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>メナード注文管理</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #fdf6f9; color: #333; font-size: 14px; }
@@ -77,6 +78,8 @@
   .btn-print:hover { background: linear-gradient(135deg, #a0485e, #c0607a); }
   .btn-save { background: #4a9060; color: white; }
   .btn-save:hover { background: #3a7050; }
+  .btn-line { background: linear-gradient(135deg, #06c755, #00a040); color: white; }
+  .btn-line:hover { background: linear-gradient(135deg, #00a040, #008030); }
   .btn-clear { background: #f0f0f0; color: #888; }
   .btn-clear:hover { background: #e0e0e0; color: #555; }
 
@@ -163,6 +166,7 @@
     <div class="action-buttons">
       <div class="print-title">メナード注文書</div>
       <button class="btn btn-print" onclick="printOrder()">🖨️ 印刷する</button>
+      <button class="btn btn-line" onclick="sendToLINE()">💬 LINEで注文を送る</button>
       <button class="btn btn-save" onclick="saveOrder()">💾 注文を保存</button>
       <button class="btn btn-clear" onclick="clearOrder()">🗑️ クリア</button>
     </div>
@@ -353,6 +357,63 @@ function saveOrder() {
 function printOrder() {
   if (orderItems.length === 0) { alert('注文商品がありません'); return; }
   window.print();
+}
+
+// LIFF初期化
+const LIFF_ID = '2009711109-L6TqteMX';
+let liffReady = false;
+liff.init({ liffId: LIFF_ID })
+  .then(() => { liffReady = true; })
+  .catch(err => { console.warn('LIFF init error:', err); });
+
+function buildOrderText() {
+  const name = document.getElementById('customerName').value || '（名前未入力）';
+  const date = document.getElementById('orderDate').value;
+  const note = document.getElementById('orderNote').value;
+  let totalTax = 0;
+  const lines = orderItems.map(o => {
+    const tax = parsePrice(o.product.priceTax) || parsePrice(o.product.priceEx);
+    totalTax += tax * o.qty;
+    return `・${o.product.name}　×${o.qty}　${formatNum(tax * o.qty)}円`;
+  });
+  const text = [
+    '🌸 メナード注文',
+    '━━━━━━━━━━',
+    `👤 お名前：${name}`,
+    `📅 日付：${date}`,
+    note ? `📝 メモ：${note}` : '',
+    '━━━━━━━━━━',
+    ...lines,
+    '━━━━━━━━━━',
+    `💴 合計（税込）：${formatNum(totalTax)}円`,
+  ].filter(Boolean).join('\n');
+  return { text, totalTax };
+}
+
+function sendToLINE() {
+  if (orderItems.length === 0) { alert('注文商品がありません'); return; }
+  const { text } = buildOrderText();
+
+  // LINEアプリ内（LIFF）から開いている場合 → liff.sendMessages()で直接送信
+  if (liffReady && liff.isInClient()) {
+    liff.sendMessages([{ type: 'text', text }])
+      .then(() => {
+        alert('✅ 注文をLINEで送信しました！');
+        // 送信後にLIFFを閉じる
+        liff.closeWindow();
+      })
+      .catch(err => {
+        alert('送信に失敗しました。もう一度お試しください。\n' + err.message);
+      });
+  } else {
+    // ブラウザから開いている場合 → クリップボード＋LINEアプリ起動
+    navigator.clipboard.writeText(text).then(() => {
+      const encoded = encodeURIComponent(text);
+      window.open(`https://line.me/R/oaMessage/@761sosfz/?text=${encoded}`, '_blank');
+    }).catch(() => {
+      alert('注文内容をコピーしてLINEで送ってください：\n\n' + text);
+    });
+  }
 }
 
 function showHistory() {
