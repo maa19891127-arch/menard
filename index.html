@@ -182,6 +182,11 @@
     <div class="customer-info">
       <h2>📋 注文情報</h2>
       <input type="text" id="customerName" placeholder="お客様名" />
+      <select id="deliveryType">
+        <option value="配送希望">📦 配送希望</option>
+        <option value="自宅まで対面配送希望">🚗 自宅まで対面配送希望</option>
+        <option value="愛知県弥富市での受取り希望">🏪 愛知県弥富市での受取り希望</option>
+      </select>
       <div class="row2">
         <input type="date" id="orderDate" />
         <input type="text" id="orderNote" placeholder="メモ" />
@@ -424,6 +429,7 @@ function clearOrder() {
     document.getElementById('customerName').value = '';
     document.getElementById('orderNote').value = '';
     document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('deliveryType').value = '配送希望';
     renderOrder();
   }
 }
@@ -464,6 +470,7 @@ function buildOrderText() {
   const name = document.getElementById('customerName').value || '（名前未入力）';
   const date = document.getElementById('orderDate').value;
   const note = document.getElementById('orderNote').value;
+  const delivery = document.getElementById('deliveryType').value;
   let totalTax = 0;
   const lines = orderItems.map(o => {
     const tax = parsePrice(o.product.priceTax) || parsePrice(o.product.priceEx);
@@ -475,6 +482,7 @@ function buildOrderText() {
     '━━━━━━━━━━',
     `👤 お名前：${name}`,
     `📅 日付：${date}`,
+    `🚚 お届け：${delivery}`,
     note ? `📝 メモ：${note}` : '',
     '━━━━━━━━━━',
     ...lines,
