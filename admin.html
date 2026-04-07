@@ -28,7 +28,11 @@ body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #fdf6f
 
 /* ダッシュボード */
 .dashboard { padding: 16px; }
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.stats2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card.wide { border-left-color: #9a5090; }
+.stat-card.wide .num { color: #9a5090; }
+.stat-card.wide .sublabel { font-size: 11px; color: #b090c0; margin-top: 2px; }
 .stat-card { background: white; border-radius: 10px; padding: 14px; border-left: 4px solid #c0607a; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
 .stat-card .num { font-size: 26px; font-weight: bold; color: #c0607a; }
 .stat-card .label { font-size: 12px; color: #888; margin-top: 4px; }
@@ -158,7 +162,21 @@ body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; background: #fdf6f
       </div>
       <div class="stat-card" style="border-color:#207040">
         <div class="num" id="stat-sales" style="color:#207040">0</div>
-        <div class="label">💴 今月売上(税込)</div>
+        <div class="label">💴 今月売上(1〜末日)</div>
+      </div>
+    </div>
+
+    <!-- 締め日別売上（2行目） -->
+    <div class="stats2">
+      <div class="stat-card wide">
+        <div class="num" id="stat-period">0</div>
+        <div class="label">📊 締め期間売上(税込)</div>
+        <div class="sublabel" id="stat-period-label">21日〜20日締め</div>
+      </div>
+      <div class="stat-card wide">
+        <div class="num" id="stat-period-count">0</div>
+        <div class="label">📋 締め期間注文数</div>
+        <div class="sublabel" id="stat-period-count-label">21日〜20日</div>
       </div>
     </div>
 
@@ -309,11 +327,37 @@ function init() {
   updateStats();
 }
 
+// ---- 21日〜20日締め期間を計算 ----
+function get2120Period() {
+  const now = new Date();
+  const day = now.getDate();
+  let startY, startM, endY, endM;
+  if (day >= 21) {
+    // 今月21日〜来月20日
+    startY = now.getFullYear();
+    startM = now.getMonth();
+    endY = startM === 11 ? startY + 1 : startY;
+    endM = (startM + 1) % 12;
+  } else {
+    // 先月21日〜今月20日
+    endY = now.getFullYear();
+    endM = now.getMonth();
+    startY = endM === 0 ? endY - 1 : endY;
+    startM = (endM - 1 + 12) % 12;
+  }
+  const start = new Date(startY, startM, 21);
+  const end   = new Date(endY, endM, 20, 23, 59, 59);
+  const label = `${startY}/${startM+1}/21〜${endY}/${endM+1}/20`;
+  return { start, end, label };
+}
+
 // ---- 統計 ----
 function updateStats() {
   document.getElementById('stat-all').textContent = orders.length;
   document.getElementById('stat-new').textContent = orders.filter(o=>o.status==='未対応').length;
   document.getElementById('stat-ship').textContent = orders.filter(o=>o.status==='発送済み').length;
+
+  // 今月（1日〜末日）
   const now = new Date();
   const thisMonth = orders.filter(o => {
     const d = new Date(o.date);
@@ -321,6 +365,18 @@ function updateStats() {
   });
   const sales = thisMonth.reduce((s,o)=>s+(parseInt(o.total)||0), 0);
   document.getElementById('stat-sales').textContent = sales.toLocaleString()+'円';
+
+  // 21日〜20日締め
+  const { start, end, label } = get2120Period();
+  const periodOrders = orders.filter(o => {
+    const d = new Date(o.date);
+    return d >= start && d <= end;
+  });
+  const periodSales = periodOrders.reduce((s,o)=>s+(parseInt(o.total)||0), 0);
+  document.getElementById('stat-period').textContent = periodSales.toLocaleString()+'円';
+  document.getElementById('stat-period-label').textContent = label;
+  document.getElementById('stat-period-count').textContent = periodOrders.length + '件';
+  document.getElementById('stat-period-count-label').textContent = label;
 }
 
 // ---- 注文一覧 ----
