@@ -282,7 +282,7 @@
     <div class="total-section">
       <div class="total-row"><span>小計（税抜）</span><span id="subtotalEx">0円</span></div>
       <div class="total-row"><span>小計（税込）</span><span id="subtotalTax">0円</span></div>
-      <div class="total-row shipping" id="shippingRow" style="display:none"><span>🚚 送料（ゆうパック60）</span><span id="shippingCost">0円</span></div>
+      <div class="total-row shipping" id="shippingRow" style="display:none"><span>🚚 送料（ゆうパック）</span><span id="shippingCost">0円</span></div>
       <div class="total-row grand"><span>合計（税込）</span><span id="grandTotal">0円</span></div>
     </div>
 
@@ -656,7 +656,7 @@ function buildOrderText() {
     ...lines,
     '━━━━━━━━━━',
     `💴 小計（税込）：${totalTax.toLocaleString()}円`,
-    shipping !== null ? `🚚 送料（ゆうパック60）：${shipping.toLocaleString()}円` : '',
+    shipping !== null ? `🚚 送料（ゆうパック）：${shipping.toLocaleString()}円` : '',
     `💰 合計：${grandTotal.toLocaleString()}円`,
   ].filter(Boolean).join('\n');
   return { text, totalTax: grandTotal };
