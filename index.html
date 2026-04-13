@@ -328,6 +328,11 @@ function init() {
   });
 
   renderProducts();
+
+  // モバイル初期状態：注文パネルを非表示
+  if (window.innerWidth <= 700) {
+    document.getElementById('orderPanel').classList.add('panel-hidden');
+  }
 }
 
 function selectCat(cat) {
