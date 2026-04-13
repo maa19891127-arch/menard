@@ -164,9 +164,11 @@
       width: 20px; height: 20px; font-size: 11px; display: inline-flex;
       align-items: center; justify-content: center; font-weight: bold;
     }
-    .container { flex-direction: column; height: calc(100vh - 100px); }
-    .order-panel { width: 100%; border-top: 2px solid #e8c0cc; flex: 1; overflow-y: auto; }
-    .product-list { max-height: calc(100vh - 280px); }
+    .container { flex-direction: column; height: auto; }
+    #productPanel { width: 100%; }
+    #orderPanel { display: none; width: 100%; border-top: 2px solid #e8c0cc; }
+    #orderPanel.panel-visible { display: flex; flex-direction: column; }
+    .product-list { max-height: calc(100vh - 220px); }
     .panel-hidden { display: none !important; }
   }
 </style>
@@ -329,10 +331,6 @@ function init() {
 
   renderProducts();
 
-  // モバイル初期状態：注文パネルを非表示
-  if (window.innerWidth <= 700) {
-    document.getElementById('orderPanel').classList.add('panel-hidden');
-  }
 }
 
 function selectCat(cat) {
@@ -465,20 +463,18 @@ function renderOrder() {
 
 // モバイルタブ切り替え
 function switchTab(tab) {
-  const isMobile = window.innerWidth <= 700;
-  if (!isMobile) return;
   const pp = document.getElementById('productPanel');
   const op = document.getElementById('orderPanel');
   const tp = document.getElementById('tabProducts');
   const tc = document.getElementById('tabCart');
   if (tab === 'products') {
     pp.classList.remove('panel-hidden');
-    op.classList.add('panel-hidden');
+    op.classList.remove('panel-visible');
     tp.classList.add('active');
     tc.classList.remove('active');
   } else {
     pp.classList.add('panel-hidden');
-    op.classList.remove('panel-hidden');
+    op.classList.add('panel-visible');
     tp.classList.remove('active');
     tc.classList.add('active');
   }
