@@ -87,7 +87,12 @@
   /* 合計 */
   .total-section { padding: 12px; border-top: 2px solid #e8c0cc; background: #fff5f8; }
   .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 13px; }
+  .total-row.shipping { color: #2060c0; }
   .total-row.grand { font-size: 16px; font-weight: bold; color: #c0607a; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e8c0cc; }
+  .pref-select-wrap { display: none; margin-bottom: 6px; }
+  .pref-select-wrap.visible { display: block; }
+  .pref-select-wrap label { font-size: 11px; color: #888; margin-bottom: 3px; display: block; }
+  .pref-select-wrap select { width: 100%; padding: 7px 10px; border: 1.5px solid #ddb0c0; border-radius: 6px; font-size: 13px; outline: none; background: white; }
 
   /* ボタン */
   .action-buttons { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -218,6 +223,51 @@
         <button class="delivery-btn" onclick="selectDelivery(this,'愛知県弥富市での受取り希望')">🏪 愛知県弥富市での受取り希望</button>
       </div>
       <input type="hidden" id="deliveryType" value="配送希望">
+      <div class="pref-select-wrap visible" id="prefWrap">
+        <label>📍 お届け先の都道府県</label>
+        <select id="prefSelect" onchange="renderOrder()">
+          <option value="">-- 都道府県を選択 --</option>
+          <optgroup label="北海道・東北">
+            <option value="北海道">北海道</option>
+            <option value="青森">青森県</option><option value="岩手">岩手県</option>
+            <option value="宮城">宮城県</option><option value="秋田">秋田県</option>
+            <option value="山形">山形県</option><option value="福島">福島県</option>
+          </optgroup>
+          <optgroup label="関東">
+            <option value="茨城">茨城県</option><option value="栃木">栃木県</option>
+            <option value="群馬">群馬県</option><option value="埼玉">埼玉県</option>
+            <option value="千葉">千葉県</option><option value="東京">東京都</option>
+            <option value="神奈川">神奈川県</option><option value="山梨">山梨県</option>
+          </optgroup>
+          <optgroup label="信越・北陸">
+            <option value="新潟">新潟県</option><option value="長野">長野県</option>
+            <option value="富山">富山県</option><option value="石川">石川県</option>
+            <option value="福井">福井県</option>
+          </optgroup>
+          <optgroup label="東海">
+            <option value="愛知">愛知県</option><option value="静岡">静岡県</option>
+            <option value="岐阜">岐阜県</option><option value="三重">三重県</option>
+          </optgroup>
+          <optgroup label="近畿">
+            <option value="滋賀">滋賀県</option><option value="京都">京都府</option>
+            <option value="大阪">大阪府</option><option value="兵庫">兵庫県</option>
+            <option value="奈良">奈良県</option><option value="和歌山">和歌山県</option>
+          </optgroup>
+          <optgroup label="中国・四国">
+            <option value="鳥取">鳥取県</option><option value="島根">島根県</option>
+            <option value="岡山">岡山県</option><option value="広島">広島県</option>
+            <option value="山口">山口県</option><option value="徳島">徳島県</option>
+            <option value="香川">香川県</option><option value="愛媛">愛媛県</option>
+            <option value="高知">高知県</option>
+          </optgroup>
+          <optgroup label="九州・沖縄">
+            <option value="福岡">福岡県</option><option value="佐賀">佐賀県</option>
+            <option value="長崎">長崎県</option><option value="熊本">熊本県</option>
+            <option value="大分">大分県</option><option value="宮崎">宮崎県</option>
+            <option value="鹿児島">鹿児島県</option><option value="沖縄">沖縄県</option>
+          </optgroup>
+        </select>
+      </div>
       <div class="row2">
         <input type="date" id="orderDate" />
         <input type="text" id="orderNote" placeholder="メモ" />
@@ -232,6 +282,7 @@
     <div class="total-section">
       <div class="total-row"><span>小計（税抜）</span><span id="subtotalEx">0円</span></div>
       <div class="total-row"><span>小計（税込）</span><span id="subtotalTax">0円</span></div>
+      <div class="total-row shipping" id="shippingRow" style="display:none"><span>🚚 送料（ゆうパック60）</span><span id="shippingCost">0円</span></div>
       <div class="total-row grand"><span>合計（税込）</span><span id="grandTotal">0円</span></div>
     </div>
 
@@ -428,6 +479,7 @@ function renderOrder() {
     el.innerHTML = '<div class="order-empty">← 左の商品を選んでください</div>';
     document.getElementById('subtotalEx').textContent = '0円';
     document.getElementById('subtotalTax').textContent = '0円';
+    document.getElementById('shippingRow').style.display = 'none';
     document.getElementById('grandTotal').textContent = '0円';
     return;
   }
@@ -458,7 +510,18 @@ function renderOrder() {
 
   document.getElementById('subtotalEx').textContent = formatNum(totalEx);
   document.getElementById('subtotalTax').textContent = formatNum(totalTax);
-  document.getElementById('grandTotal').textContent = formatNum(totalTax);
+
+  const delivery = document.getElementById('deliveryType').value;
+  const shippingRow = document.getElementById('shippingRow');
+  const shipping = (delivery === '配送希望') ? getShippingCost() : null;
+  if (shipping !== null) {
+    document.getElementById('shippingCost').textContent = formatNum(shipping);
+    shippingRow.style.display = '';
+    document.getElementById('grandTotal').textContent = formatNum(totalTax + shipping);
+  } else {
+    shippingRow.style.display = 'none';
+    document.getElementById('grandTotal').textContent = formatNum(totalTax);
+  }
 }
 
 // モバイルタブ切り替え
@@ -489,10 +552,37 @@ function updateCartBadge() {
   badge.style.display = count > 0 ? 'inline-flex' : 'none';
 }
 
+// ゆうパック60 愛知発・持込割-120円・スマホ割-180円 適用後
+const SHIPPING_RATES = {
+  '北海道': 1290,
+  '青森': 690, '岩手': 690, '宮城': 690, '秋田': 690, '山形': 690, '福島': 690,
+  '茨城': 580, '栃木': 580, '群馬': 580, '埼玉': 580, '千葉': 580, '東京': 580,
+  '神奈川': 580, '新潟': 580, '富山': 580, '石川': 580, '福井': 580,
+  '山梨': 580, '長野': 580, '岐阜': 580, '静岡': 580, '愛知': 520,
+  '三重': 580, '滋賀': 580, '京都': 580, '大阪': 580, '兵庫': 580,
+  '奈良': 580, '和歌山': 580,
+  '鳥取': 690, '島根': 690, '岡山': 690, '広島': 690, '山口': 690,
+  '徳島': 690, '香川': 690, '愛媛': 690, '高知': 690,
+  '福岡': 850, '佐賀': 850, '長崎': 850, '熊本': 850, '大分': 850, '宮崎': 850, '鹿児島': 850,
+  '沖縄': 1150
+};
+
+function getShippingCost() {
+  const pref = document.getElementById('prefSelect').value;
+  return pref && SHIPPING_RATES[pref] ? SHIPPING_RATES[pref] : null;
+}
+
 function selectDelivery(btn, value) {
   document.querySelectorAll('.delivery-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   document.getElementById('deliveryType').value = value;
+  const prefWrap = document.getElementById('prefWrap');
+  if (value === '配送希望') {
+    prefWrap.classList.add('visible');
+  } else {
+    prefWrap.classList.remove('visible');
+  }
+  renderOrder();
 }
 
 function clearOrder() {
@@ -551,19 +641,25 @@ function buildOrderText() {
     totalTax += tax * o.qty;
     return `・${o.product.name}　×${o.qty}　${tax * o.qty >= 0 ? (tax * o.qty).toLocaleString() + '円' : ''}`;
   });
+  const shipping = (delivery === '配送希望') ? getShippingCost() : null;
+  const pref = document.getElementById('prefSelect').value;
+  const grandTotal = totalTax + (shipping || 0);
   const text = [
     '🌸 メナード注文',
     '━━━━━━━━━━',
     `👤 お名前：${name}`,
     `📅 日付：${date}`,
     `🚚 お届け：${delivery}`,
+    (delivery === '配送希望' && pref) ? `📍 お届け先：${pref}` : '',
     note ? `📝 メモ：${note}` : '',
     '━━━━━━━━━━',
     ...lines,
     '━━━━━━━━━━',
-    `💴 合計（税込）：${totalTax.toLocaleString()}円`,
+    `💴 小計（税込）：${totalTax.toLocaleString()}円`,
+    shipping !== null ? `🚚 送料（ゆうパック60）：${shipping.toLocaleString()}円` : '',
+    `💰 合計：${grandTotal.toLocaleString()}円`,
   ].filter(Boolean).join('\n');
-  return { text, totalTax };
+  return { text, totalTax: grandTotal };
 }
 
 let _currentOrderText = '';
