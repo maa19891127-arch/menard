@@ -62,6 +62,9 @@
   .customer-info h2 { font-size: 15px; color: #c0607a; margin-bottom: 8px; }
   .customer-info input, .customer-info select { width: 100%; padding: 7px 10px; border: 1.5px solid #ddb0c0; border-radius: 6px; font-size: 13px; margin-bottom: 6px; outline: none; }
   .customer-info input:focus { border-color: #c0607a; }
+  .delivery-btns { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+  .delivery-btn { padding: 8px 10px; border: 1.5px solid #ddb0c0; border-radius: 6px; background: white; color: #666; cursor: pointer; font-size: 12px; text-align: left; transition: all 0.15s; }
+  .delivery-btn.selected { background: #c0607a; color: white; border-color: #c0607a; font-weight: bold; }
   .row2 { display: flex; gap: 6px; }
   .row2 input { margin-bottom: 0; }
 
@@ -142,12 +145,29 @@
   }
   .print-title { display: none; }
 
-  /* レスポンシブ */
+  /* モバイルタブ */
+  .mobile-tabs { display: none; }
   @media (max-width: 700px) {
-    .container { flex-direction: column; height: auto; }
-    .order-panel { width: 100%; border-top: 2px solid #e8c0cc; }
-    .product-list { max-height: 50vh; }
-    .order-list-wrap { max-height: 40vh; }
+    .mobile-tabs {
+      display: flex; position: sticky; top: 52px; z-index: 99;
+      background: white; border-bottom: 2px solid #e8c0cc;
+    }
+    .m-tab {
+      flex: 1; padding: 12px 6px; border: none; background: white;
+      color: #999; font-size: 14px; font-weight: bold; cursor: pointer;
+      border-bottom: 3px solid transparent; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .m-tab.active { color: #c0607a; border-bottom-color: #c0607a; background: #fff5f8; }
+    .cart-badge {
+      background: #c0607a; color: white; border-radius: 50%;
+      width: 20px; height: 20px; font-size: 11px; display: inline-flex;
+      align-items: center; justify-content: center; font-weight: bold;
+    }
+    .container { flex-direction: column; height: calc(100vh - 100px); }
+    .order-panel { width: 100%; border-top: 2px solid #e8c0cc; flex: 1; overflow-y: auto; }
+    .product-list { max-height: calc(100vh - 280px); }
+    .panel-hidden { display: none !important; }
   }
 </style>
 </head>
@@ -158,9 +178,17 @@
   <h1>メナード 注文管理</h1>
 </div>
 
+<!-- モバイル用タブ -->
+<div class="mobile-tabs" id="mobileTabs">
+  <button class="m-tab active" id="tabProducts" onclick="switchTab('products')">🛍 商品を選ぶ</button>
+  <button class="m-tab" id="tabCart" onclick="switchTab('cart')">
+    🛒 カートを見る <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+  </button>
+</div>
+
 <div class="container">
   <!-- 左: 商品パネル -->
-  <div class="product-panel">
+  <div class="product-panel" id="productPanel">
     <div class="filter-area">
       <div class="filter-row">
         <div class="filter-label">📂 カテゴリ</div>
@@ -178,15 +206,16 @@
   </div>
 
   <!-- 右: 注文パネル -->
-  <div class="order-panel">
+  <div class="order-panel" id="orderPanel">
     <div class="customer-info">
       <h2>📋 注文情報</h2>
       <input type="text" id="customerName" placeholder="お客様名" />
-      <select id="deliveryType">
-        <option value="配送希望">📦 配送希望</option>
-        <option value="自宅まで対面配送希望">🚗 自宅まで対面配送希望</option>
-        <option value="愛知県弥富市での受取り希望">🏪 愛知県弥富市での受取り希望</option>
-      </select>
+      <div class="delivery-btns" id="deliveryBtns">
+        <button class="delivery-btn selected" onclick="selectDelivery(this,'配送希望')">📦 配送希望</button>
+        <button class="delivery-btn" onclick="selectDelivery(this,'自宅まで対面配送希望')">🚗 自宅まで対面配送希望</button>
+        <button class="delivery-btn" onclick="selectDelivery(this,'愛知県弥富市での受取り希望')">🏪 愛知県弥富市での受取り希望</button>
+      </div>
+      <input type="hidden" id="deliveryType" value="配送希望">
       <div class="row2">
         <input type="date" id="orderDate" />
         <input type="text" id="orderNote" placeholder="メモ" />
@@ -358,6 +387,12 @@ function addProduct(idx) {
     orderItems.push({ product: p, qty: 1 });
   }
   renderOrder();
+  updateCartBadge();
+  // モバイル：カートに1個目が追加されたらカートタブをピカッと示す
+  if (window.innerWidth <= 700 && orderItems.length === 1) {
+    const tc = document.getElementById('tabCart');
+    if (tc) { tc.style.animation = 'none'; tc.style.background = '#fff0f5'; setTimeout(()=>tc.style.background='', 600); }
+  }
 }
 
 function changeQty(i, delta) {
@@ -366,6 +401,7 @@ function changeQty(i, delta) {
     orderItems.splice(i, 1);
   }
   renderOrder();
+  updateCartBadge();
 }
 
 function removeItem(i) {
@@ -422,6 +458,42 @@ function renderOrder() {
   document.getElementById('grandTotal').textContent = formatNum(totalTax);
 }
 
+// モバイルタブ切り替え
+function switchTab(tab) {
+  const isMobile = window.innerWidth <= 700;
+  if (!isMobile) return;
+  const pp = document.getElementById('productPanel');
+  const op = document.getElementById('orderPanel');
+  const tp = document.getElementById('tabProducts');
+  const tc = document.getElementById('tabCart');
+  if (tab === 'products') {
+    pp.classList.remove('panel-hidden');
+    op.classList.add('panel-hidden');
+    tp.classList.add('active');
+    tc.classList.remove('active');
+  } else {
+    pp.classList.add('panel-hidden');
+    op.classList.remove('panel-hidden');
+    tp.classList.remove('active');
+    tc.classList.add('active');
+  }
+}
+
+// カートバッジ更新
+function updateCartBadge() {
+  const count = orderItems.reduce((s, o) => s + o.qty, 0);
+  const badge = document.getElementById('cartBadge');
+  if (!badge) return;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+function selectDelivery(btn, value) {
+  document.querySelectorAll('.delivery-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('deliveryType').value = value;
+}
+
 function clearOrder() {
   if (orderItems.length === 0) return;
   if (confirm('注文をクリアしますか？')) {
@@ -430,6 +502,7 @@ function clearOrder() {
     document.getElementById('orderNote').value = '';
     document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('deliveryType').value = '配送希望';
+    document.querySelectorAll('.delivery-btn').forEach((b,i) => b.classList.toggle('selected', i===0));
     renderOrder();
   }
 }
