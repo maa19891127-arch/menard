@@ -673,6 +673,9 @@ let _currentOrderText = '';
 
 function sendToLINE() {
   if (orderItems.length === 0) { alert('注文商品がありません'); return; }
+  if (!document.getElementById('customerName').value.trim()) { alert('お客様名を入力してください'); return; }
+  const delivery = document.getElementById('deliveryType').value;
+  if (!delivery) { alert('お届け方法を選択してください'); return; }
   const { text } = buildOrderText();
   _currentOrderText = text;
 
