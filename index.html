@@ -288,7 +288,7 @@
 
     <div class="action-buttons">
       <div class="print-title">メナード注文書</div>
-      <button class="btn btn-line" onclick="sendToLINE()">💬 LINEで注文を送る</button>
+      <button class="btn btn-line" id="lineBtn" onclick="sendToLINE()">💬 LINEで注文を送る</button>
       <button class="btn btn-clear" onclick="clearOrder()">🗑️ クリア</button>
     </div>
   </div>
@@ -514,6 +514,13 @@ function renderOrder() {
   const delivery = document.getElementById('deliveryType').value;
   const shippingRow = document.getElementById('shippingRow');
   const shipping = (delivery === '配送希望') ? getShippingCost() : null;
+
+  // 配送希望で都道府県未選択ならLINEボタンを隠す
+  const lineBtn = document.getElementById('lineBtn');
+  if (lineBtn) {
+    const prefOk = delivery !== '配送希望' || (document.getElementById('prefSelect').value !== '');
+    lineBtn.style.display = prefOk ? '' : 'none';
+  }
   if (shipping !== null) {
     document.getElementById('shippingCost').textContent = formatNum(shipping);
     shippingRow.style.display = '';
